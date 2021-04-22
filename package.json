@@ -1,0 +1,22 @@
+{
+  "name": "premid-powercord",
+  "version": "1.0.0",
+  "description": "Gives you the abilty to have a custom presence that will start when you launch discord. Works with [show-all-activty](https://github.com/Juby210/show-all-activities)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MulverineX/premid-powercord.git"
+  },
+  "author": "MulverineX",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/MulverineX/premid-powercord/issues"
+  },
+  "homepage": "https://github.com/MulverineX/premid-powercord#readme",
+  "dependencies": {
+    "socket.io": "^4.0.1"
+  }
+}
