@@ -1,21 +1,28 @@
-import { createServer } from "http";
-import socketIo from "socket.io";
+const { createServer } = require("http");
+const socketIo = require("socket.io");
+const { getModule } = require('powercord/webpack');
 
 const error = (s) => console.error(s);
 const success = (s) => console.log(s);
 
-export let io;
-export let socket;
-export let server;
-export let connected = false;
+let io;
+let socket;
+let server;
+let connected = false;
+const connections = [];
+let getCurrentUser;
 
-export function init() {
+const setActivity = console.log;
+const clearActivity = console.log;
+
+module.exports.init = function init() {
 	return new Promise(resolve => {
 		//* Create server
 		//* create SocketIo server, don't server client
 		//* Try to listen to port 3020
 		//* If that fails/some other error happens run socketError
 		//* If someone connects to socket socketConnection
+		({getCurrentUser} = getModule(['getCurrentUser'], false));
 		server = createServer();
 		io = new socketIo.Server(server, {
 			serveClient: false,
@@ -33,6 +40,13 @@ export function init() {
 	});
 }
 
+module.exports.destroy = async function destroy() {
+	connections.forEach(x => x.disconnect());
+	await io.close();
+	server.close();
+	connected = false;
+}
+
 function socketConnection(cSocket) {
 	//* Show debug
 	//* Set exported socket letiable to current socket
@@ -44,14 +58,13 @@ function socketConnection(cSocket) {
 	//* Once socket user disconnects run cleanup
 	success("Socket connection");
 	socket = cSocket;
-	getDiscordUser()
-		.then(user => socket.emit("discordUser", user))
-		.catch(_ => socket.emit("discordUser", null));
-    
+	const user = getCurrentUser();
+	socket.emit('discordUser', user);
+
 	socket.on("setActivity", setActivity); // set to presenceData.presenceData and ensure presence.clientId is set
 	socket.on("clearActivity", clearActivity);
 	socket.on("getVersion", () =>
-		socket.emit("receiveVersion", '1')
+		socket.emit("receiveVersion", '2.2.0'.replace(/[\D]/g, ""))
 	);
 	socket.once("disconnect", () => {
 		connected = false;
