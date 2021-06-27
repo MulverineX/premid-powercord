@@ -1,16 +1,23 @@
-const { createServer } = require("http");
-const socketIo = require("socket.io");
+const { createServer } = require('http');
+const socketIo = require('socket.io');
 const { getModule, http: { get } } = require('powercord/webpack');
 
-const error = (s) => console.error(s);
-const success = (s) => console.log(s);
+const { openFileDialog } = require('./sideload')
 
 let io;
-let socket;
 let server;
 let getCurrentUser;
 
 let applications = {};
+
+const version = '1.1.0'
+
+const log_prefix = 'color: #7289da; font-weight: bold';
+
+let previous_log;
+
+const error = (s) => console.warn(`%c[PreMiD]%c ${s}`, log_prefix, 'font-weight: bold');
+const success = (s) => console.log(`%c[PreMiD]%c ${s}`, log_prefix, 'font-weight: bold');
 
 const { SET_ACTIVITY } = getModule(['INVITE_BROWSER'], false);
 
@@ -24,11 +31,11 @@ const setActivity = async (rpc) => {
 
     if (presence.buttons && presence.buttons.length !== 0) activity.buttons = presence.buttons;
 
-    if (presence.startTimestamp) {
-        activity.timestamps = {
-            start: presence.startTimestamp
-        }
-        if (presence.endTimestamp) activity.timestamps.end = presence.endTimestamp
+    if (presence.startTimestamp || presence.endTimestamp) {
+        activity.timestamps = {};
+
+        if (presence.startTimestamp) activity.timestamps.start = presence.startTimestamp;
+        if (presence.endTimestamp) activity.timestamps.end = presence.endTimestamp;
     }
 
     if (presence.largeImageKey) {
@@ -50,7 +57,12 @@ const setActivity = async (rpc) => {
         name = data.body.name;
         applications[rpc.clientId] = name;
     }
-    SET_ACTIVITY.handler({
+
+    if (!activity.assets?.large_text) activity.assets = { large_text: `PreMiD pc${version}`};
+    
+    else activity.assets.large_text = `PreMiD pc${version} • Ext ${activity.assets.large_text.split('Ext ')[1]}`
+
+    const handling = {
         socket: {
             id: 100,
             application: {
@@ -63,6 +75,23 @@ const setActivity = async (rpc) => {
             pid: 10,
             activity: activity,
         },
+    };
+
+    SET_ACTIVITY.handler(handling).then((e) => {
+        let extras = '';
+
+        if (e.timestamps) extras+= `\nTimes: ${Object.keys(e.timestamps).join(' ')}`;
+        if (e.metadata?.button_urls) extras += `\nButtons: ${e.metadata.button_urls.join(' ')}`;
+
+        const log = `%c[PreMiD]%c Activity set\n\n${e.name}%c • ${e.assets?.small_text}%c\n${e.details}\n${e.state}%c${extras}\n`;
+
+        if (log !== previous_log) console.log(log,
+            log_prefix, 
+            'font-weight: bold;', '',
+            'margin-left: .5rem', ''
+        );
+
+        previous_log = log;
     });
 };
 const clearActivity = () => {
@@ -71,7 +100,7 @@ const clearActivity = () => {
         socket: {
             id: 100,
             application: {
-                id: "463097721130188830",
+                id: '463097721130188830',
                 name: 'PreMiD',
             },
             transport: 'ipc',
@@ -90,14 +119,14 @@ module.exports.init = function init() {
         io = new socketIo.Server(server, {
             serveClient: false,
             allowEIO3: true,
-            cors: { origin: "*" }
+            cors: { origin: '*' }
         });
         server.listen(3020, () => {
             resolve();
-            success("Opened socket");
+            success('WS starting on 3020');
         });
-        server.on("error", socketError);
-        io.on("connection", socketConnection);
+        server.on('error', socketError);
+        io.on('connection', socketConnection);
     });
 }
 
@@ -108,26 +137,31 @@ module.exports.destroy = async function destroy() {
     server.close();
 }
 
-function socketConnection(cSocket) {
-    success("Socket connection");
-    socket = cSocket;
+function socketConnection(socket) {
+    success('WS Connecting');
+
+    socket.on('getVersion', () =>
+        socket.emit('receiveVersion', '2.2.0'.replace(/[\D]/g, ''))
+    );
+
     const user = getCurrentUser();
     socket.emit('discordUser', user);
 
-    socket.on("setActivity", setActivity);
-    socket.on("clearActivity", clearActivity);
-    socket.on("getVersion", () =>
-        socket.emit("receiveVersion", '2.2.0'.replace(/[\D]/g, ""))
-    );
-    socket.once("disconnect", () => { error("Socket disconnection"); });
+    socket.on('setActivity', setActivity);
+    socket.on('clearActivity', clearActivity);
+
+    socket.on('selectLocalPresence', () => openFileDialog(socket))
+
+    socket.once('disconnect', () => error('WS Disconnected'));
 }
 
 function socketError(e) {
-    error(e.message);
+    error(`WS: ${e.message}`);
 
-    if (e.code === "EADDRINUSE") {
+    if (e.code === 'EADDRINUSE') {
         powercord.api.notices.sendToast(`premid-boundPort-${Math.floor(Math.random() * 200)}`, {
-            header: 'Websocket Port Already Bound',
+            header: 'PreMiD Websocket Port Already Bound',
+            content: 'Cause: PreMiD App/Dameon still installed/running, residual Discord background processes running from crashes, etc.',
             timeout: 3000,
         });
     }
