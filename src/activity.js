@@ -19,7 +19,7 @@ let previous_log;
 const error = (s) => console.warn(`%c[PreMiD]%c ${s}`, log_prefix, 'font-weight: bold');
 const success = (s) => console.log(`%c[PreMiD]%c ${s}`, log_prefix, 'font-weight: bold');
 
-const { SET_ACTIVITY } = getModule(['INVITE_BROWSER'], false);
+const { SET_ACTIVITY } = getModule(['SET_ACTIVITY'], false);
 
 const setActivity = async (rpc) => {
     const presence = rpc.presenceData;
@@ -59,10 +59,11 @@ const setActivity = async (rpc) => {
     }
 
     if (!activity.assets?.large_text) activity.assets = { large_text: `PreMiD pc${version}`};
-    
+
     else activity.assets.large_text = `PreMiD pc${version} • Ext ${activity.assets.large_text.split('Ext ')[1]}`
 
     const handling = {
+        isSocketConnected: () => true,
         socket: {
             id: 100,
             application: {
@@ -86,7 +87,7 @@ const setActivity = async (rpc) => {
         const log = `%c[PreMiD]%c Activity set\n\n${e.name}%c • ${e.assets?.small_text}%c\n${e.details}\n${e.state}%c${extras}\n`;
 
         if (log !== previous_log) console.log(log,
-            log_prefix, 
+            log_prefix,
             'font-weight: bold;', '',
             'margin-left: .5rem', ''
         );
