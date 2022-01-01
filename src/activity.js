@@ -83,6 +83,9 @@ const setActivity = async (rpc) => {
 
         if (e.timestamps) extras+= `\nTimes: ${Object.keys(e.timestamps).join(' ')}`;
         if (e.metadata?.button_urls) extras += `\nButtons: ${e.metadata.button_urls.join(' ')}`;
+        if (e.assets.large_image.substring(0,12) === 'mp:external/') extras += `\nLarge Image URL: ${e.assets.large_image.match(/mp:external\/(?:.{43})\/(.+)/)[1]} `;
+        if (e.assets.small_image.substring(0,12) === 'mp:external/') extras += `\nSmall Image URL: ${e.assets.small_image.match(/mp:external\/(?:.{43})\/(.+)/)[1]} `;
+        console.log(e);
 
         const log = `%c[PreMiD]%c Activity set\n\n${e.name}%c • ${e.assets?.small_text}%c\n${e.details}\n${e.state}%c${extras}\n`;
 
